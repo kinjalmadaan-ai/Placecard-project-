@@ -436,7 +436,7 @@ export default function Landing() {
             <div className="about-event-card">
               <div className="about-event-top">
                 <span className="about-event-icon">✿</span>
-                <span>THE PLACEcard EXPERIENCE</span>
+                <span>THE Placecard EXPERIENCE</span>
               </div>
 
               <h3>Every detail, together.</h3>
