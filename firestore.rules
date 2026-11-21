@@ -1,0 +1,54 @@
+rules_version = '2';
+
+// SECURITY MODEL
+// All writes go through the Express backend (Firebase Admin SDK, which bypasses
+// these rules after verifying the caller's ID token and role). The browser is
+// therefore denied every write. Reads are limited to a person's own data, or to
+// the admin who owns the event. Invitation tokens live in `invitations`, which no
+// browser can read, so tokens can never be harvested from Firestore.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin()  { return signedIn() && request.auth.token.admin == true; }
+    function ownsDoc()  { return isAdmin() && resource.data.ownerId == request.auth.uid; }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;            // roles can only be set by the backend / setup script
+    }
+
+    match /events/{eventId} {
+      allow read: if ownsDoc();
+      allow write: if false;
+    }
+
+    match /guests/{guestId} {
+      allow read: if signedIn() && (resource.data.userId == request.auth.uid || ownsDoc());
+      allow write: if false;
+    }
+
+    match /rsvps/{rsvpId} {
+      allow read: if signedIn() && (resource.data.userId == request.auth.uid || ownsDoc());
+      allow write: if false;
+    }
+
+    match /invitations/{invitationId} {
+      allow read, write: if false;      // contains secret tokens: backend only
+    }
+
+    match /emailLogs/{logId} {
+      allow read: if ownsDoc();
+      allow write: if false;
+    }
+
+    match /settings/{uid} {
+      allow read: if isAdmin() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
